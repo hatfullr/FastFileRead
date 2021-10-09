@@ -438,3 +438,7 @@ print("NumPy's loadtxt:",time()-start)
 
 
 Another benefit of FastFileRead is its ability to read binary data files. However, you must supply the data structure yourself. We suggest you read the descriptions of the input parameters in the text above before attempting this.
+
+
+### Use with StarSmasher output
+The author of FastFileRead often uses output from ![StarSmasher](https://jalombar.github.io/starsmasher/), and so a special convenience function has been included with FastFileRead called `read_starsmasher` to read `out*.sph` data files. If you would also like to use this function, please note that the number of data columns in the output files is subject to change. Thus, if you run into errors, you may need to edit `read_starsmasher` and update the following variables: `header_names`, `data_names`, `header_format`, and `data_format`.
