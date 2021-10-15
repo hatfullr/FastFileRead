@@ -549,8 +549,6 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
         'meanmolecular',
         'cc',
         'divv',
-        'ueq',
-        'tthermal',
         # These are present only when ncooling!=0
         'ueq',
         'tthermal',
