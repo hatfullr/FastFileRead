@@ -502,6 +502,7 @@ class FastFileRead:
             raise Exception("return_type for '"+fileobj['path']+"' is not one of 'dict', 'np.ndarray', or 'list'.")
 
 def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
+    if not isinstance(filenames,(list,tuple,np.ndarray)): filenames = [filenames]
     if key is None: key = filenames
     header_names = [
         'ntot',
