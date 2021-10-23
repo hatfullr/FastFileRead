@@ -501,7 +501,7 @@ class FastFileRead:
         else:
             raise Exception("return_type for '"+fileobj['path']+"' is not one of 'dict', 'np.ndarray', or 'list'.")
 
-def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
+def read_starsmasher(filenames,return_headers=False,return_data=True,key=None,**kwargs):
     if not isinstance(filenames,(list,tuple,np.ndarray)): filenames = [filenames]
     if key is None: key = filenames
     header_names = [
@@ -577,11 +577,14 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
         key=key,
         **kwargs
     )
+    for i, filename in enumerate(filenames):
+        headers[filename].dtype.names = header_names
+    
+    if return_headers and not return_data: return headers
 
     data_formats = [None]*len(filenames)
     data_column_names = [None]*len(filenames)
     for i,filename in enumerate(filenames):
-        headers[filename].dtype.names = header_names
         if headers[filename]['ncooling'] == 0:
             data_formats[i] = data_format
             data_column_names[i] = data_names[:-2]
