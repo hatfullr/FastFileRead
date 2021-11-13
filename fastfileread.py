@@ -356,9 +356,9 @@ class FastFileRead:
             # Check if the footer is binary or text
             if fileobj['footer'] > 0:
                 # Check the very first part of the footer
-                fileobj['buffer'].seek(-8,2)
+                fileobj['buffer'].seek(-16,2)
                 try:
-                    fileobj['buffer'].read(8).decode('ascii')
+                    fileobj['buffer'].read(16).decode('ascii')
                 except UnicodeDecodeError: # Found binary
                     fileobj['buffer'].seek(fileobj['header'])
                     # Keep the footer the same, as we expect it is in number of bytes to skip
@@ -501,9 +501,10 @@ class FastFileRead:
         else:
             raise Exception("return_type for '"+fileobj['path']+"' is not one of 'dict', 'np.ndarray', or 'list'.")
 
-def read_starsmasher(filenames,return_headers=False,return_data=True,key=None,**kwargs):
-    if not isinstance(filenames,(list,tuple,np.ndarray)): filenames = [filenames]
+def read_starsmasher(filenames,return_data=True,return_headers=False,key=None,**kwargs):
     if key is None: key = filenames
+    if len(key) != len(filenames):
+        raise ValueError("Keyword 'key' must have the same length as filenames")
     header_names = [
         'ntot',
         'nnopt',
@@ -531,6 +532,33 @@ def read_starsmasher(filenames,return_headers=False,return_data=True,key=None,**
         'displacey',
         'displacez',
     ]
+    header_format = [
+        'i4', # ntot
+        'i4', # nnopt
+        'f8', # hco
+        'f8', # hfloor
+        'f8', # sep0
+        'f8', # tf
+        'f8', # dtout
+        'i4', # nout
+        'i4', # nit
+        'f8', # t
+        'i4', # nav
+        'f8', # alpha
+        'f8', # beta
+        'f8', # tjumpahead
+        'i4', # ngr
+        'i4', # nrelax
+        'f8', # trelax
+        'f8', # dt
+        'f8', # omega2
+        'i4', # ncooling
+        'f8', # erad
+        'i4', # ndisplace
+        'f8', # displacex
+        'f8', # displacey
+        'f8', # displacez
+    ]
     data_names = [
         'x',
         'y',
@@ -554,21 +582,40 @@ def read_starsmasher(filenames,return_headers=False,return_data=True,key=None,**
         'ueq',
         'tthermal',
     ]
-    header_format = ['i4']*2 + ['f8']*5 + ['i4']*2 + ['f8','i4'] + ['f8']*3 + ['i4']*2 + ['f8']*3 + ['i4','f8','i4'] + ['f8']*3
-    header_format = '<' + ",".join(header_format)
-    data_format = '<'+'f8,'*16 + 'f4,f8'
+    data_format = [
+        'f8', # x
+        'f8', # y
+        'f8', # z
+        'f8', # m
+        'f8', # h
+        'f8', # rho
+        'f8', # vx
+        'f8', # vy
+        'f8', # vz
+        'f8', # vxdot
+        'f8', # vydot
+        'f8', # vzdot
+        'f8', # u
+        'f8', # udot
+        'f8', # grpot
+        'f8', # meanmolecular
+        'f4', # cc
+        'f8', # divv
+        # These are present only when ncooling!=0
+        'f8', # ueq
+        'f8', # tthermal
+    ]
 
-    header_size = sum([header_format.count(str(num))*num for num in [1,2,4,6,8]]) + 8 # +8 for newline
+    header_format = '<'+','.join(header_format)
 
-    # We need to read all the headers first no matter what, so that we know if
-    # ncooling=0 or not for each file.
-    
+    header_size = sum([header_format.count(str(num))*num for num in range(64)]) + 8 # +8 for newline
+
     filesizes = np.zeros(len(filenames),dtype=int)
     for i,filename in enumerate(filenames):
         with open(filename,'rb') as f:
             f.seek(0,2)
             filesizes[i] = f.tell()
-    
+
     headers = FastFileRead(
         filenames,
         footer=filesizes-header_size,
@@ -577,34 +624,36 @@ def read_starsmasher(filenames,return_headers=False,return_data=True,key=None,**
         key=key,
         **kwargs
     )
-    for i, filename in enumerate(filenames):
-        headers[filename].dtype.names = header_names
-    
-    if return_headers and not return_data: return headers
 
-    data_formats = [None]*len(filenames)
-    data_column_names = [None]*len(filenames)
-    for i,filename in enumerate(filenames):
-        if headers[filename]['ncooling'] == 0:
-            data_formats[i] = data_format
-            data_column_names[i] = data_names[:-2]
-        else:
-            data_formats[i] = data_format + ',f8,f8'
-            data_column_names[i] = data_names
+    for k in key:
+        headers[k].dtype.names = header_names
+
+    if not return_data and return_headers: return headers
+        
+    all_data_names = [data_names]*len(filenames)
+    all_data_formats = [data_format]*len(filenames)
+
+    for i, k in enumerate(key):
+        if headers[k]['ncooling'] == 0:
+            all_data_names[i] = all_data_names[i][:-2]
+            all_data_formats[i] = all_data_formats[i][:-2]
+
+        all_data_formats[i] = '<'+','.join(all_data_formats[i])
 
     data = FastFileRead(
         filenames,
-        header=1,
-        binary_format=data_formats,
+        header=header_size,
+        binary_format=all_data_formats,
         offset=4,
         key=key,
         **kwargs
     )
-    
-    if return_headers: return data, headers
-    else: return data
+    for i,k in enumerate(key):
+        data[k].dtype.names = all_data_names[i]
 
-    
+    if return_data and return_headers: return data, headers
+    return data
+
 
         
 """
