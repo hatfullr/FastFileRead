@@ -443,6 +443,19 @@ Another benefit of FastFileRead is its ability to read binary data files. Howeve
 ### Use with StarSmasher output
 The author of FastFileRead often uses output from ![StarSmasher](https://jalombar.github.io/starsmasher/), and so a special convenience function has been included with FastFileRead called `read_starsmasher` to read `out*.sph` data files. If you would also like to use this function, please note that the number of data columns in the output files might be dependent on the version of StarSmasher they came from. Thus, if you run into errors, you may need to edit `read_starsmasher` and update the following variables: `header_names`, `data_names`, `header_format`, and `data_format`.
 
+You must use the dtype names automatically assigned to each of the columns
+```python
+data = read_starsmasher("out0000.sph")
+print(data[0].dtype.names)
+print(data[0]['x'])
+```
+Output:
+```python
+ ('x', 'y', 'z', 'am', 'hp', 'rho', 'vx', 'vy', 'vz', 'vxdot', 'vydot', 'vzdot', 'u', 'udot', 'grpot', 'meanmolecular', 'cc', 'divv')
+ [ 2.06075168e-03 -3.28192387e+00 -3.10158243e+00 ...  3.03043285e+00
+  3.21188381e+00  3.17151571e+00]
+```
+
 Here is an example of how to use the `read_starsmasher` function:
 ```python
 from fastfileread import read_starsmasher
@@ -450,6 +463,7 @@ from fastfileread import read_starsmasher
 # Returns only the file data. Must reference the data using an integer.
 data = read_starsmasher("out0000.sph")
 print(data[0])
+print(data[0].dtype.names)
 
 # Returns the file data and headers. Must reference the data and headers using an integer.
 data, headers = read_starsmasher("out0000.sph", return_headers=True)
