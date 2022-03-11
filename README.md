@@ -441,4 +441,11 @@ Another benefit of FastFileRead is its ability to read binary data files. Howeve
 
 
 ### Use with StarSmasher output
-The author of FastFileRead often uses output from ![StarSmasher](https://jalombar.github.io/starsmasher/), and so a special convenience function has been included with FastFileRead called `read_starsmasher` to read `out*.sph` data files. If you would also like to use this function, please note that the number of data columns in the output files might be dependant on the version of StarSmasher they came from. Thus, if you run into errors, you may need to edit `read_starsmasher` and update the following variables: `header_names`, `data_names`, `header_format`, and `data_format`.
+The author of FastFileRead often uses output from ![StarSmasher](https://jalombar.github.io/starsmasher/), and so a special convenience function has been included with FastFileRead called `read_starsmasher` to read `out*.sph` data files. If you would also like to use this function, please note that the number of data columns in the output files might be dependent on the version of StarSmasher they came from. Thus, if you run into errors, you may need to edit `read_starsmasher` and update the following variables: `header_names`, `data_names`, `header_format`, and `data_format`.
+
+Here is an example of how to use the `read_starsmasher` function:
+```python
+from fastfileread import read_starsmasher
+data = read_starsmasher("out0000.sph")
+print(data[0])
+```
