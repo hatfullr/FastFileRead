@@ -503,6 +503,8 @@ class FastFileRead:
 
 def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
     if key is None: key = filenames
+    if isinstance(key,str): key = [key]
+    else: key = list(key)
     header_names = [
         'ntot',
         'nnopt',
@@ -580,17 +582,17 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
 
     
 
-    data_formats = [None]*len(filenames)
-    data_column_names = [None]*len(filenames)
-    for i,filename in enumerate(filenames):
-        headers[filename].dtype.names = header_names
-        if headers[filename]['ncooling'] == 0:
+    data_formats = [None]*len(key)
+    data_column_names = [None]*len(key)
+    for i,k in enumerate(key):
+        headers[k].dtype.names = header_names
+        if headers[k]['ncooling'] == 0:
             data_formats[i] = data_format
             data_column_names[i] = data_names[:-2]
-        elif headers[filename]['ncooling'] == 1:
+        elif headers[k]['ncooling'] == 1:
             data_formats[i] = data_format + ',f8,f8'
             data_column_names[i] = data_names
-        elif headers[filename]['ncooling'] == 2:
+        elif headers[k]['ncooling'] == 2:
             data_formats[i] = data_format + ',f8,f8,f8,f8'
             data_column_names[i] = data_names + ['opacity','uraddot']
             
