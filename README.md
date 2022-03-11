@@ -446,6 +446,16 @@ The author of FastFileRead often uses output from ![StarSmasher](https://jalomba
 Here is an example of how to use the `read_starsmasher` function:
 ```python
 from fastfileread import read_starsmasher
+
+# Returns only the file data. Must reference the data using an integer.
 data = read_starsmasher("out0000.sph")
 print(data[0])
+
+# Returns the file data and headers. Must reference the data and headers using an integer.
+data, headers = read_starsmasher("out0000.sph", return_headers=True)
+print(headers[0])
+
+# Returns the file data and headers. Can reference the data and headers using either an integer or an element from 'key', such as "file1".
+data, headers = read_starsmasher(["out0000.sph", "out0001.sph"], return_headers=True, key=["file1", "file2"])
+print(data["file1"])
 ```
