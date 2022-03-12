@@ -233,39 +233,97 @@ class FastFileRead:
             self._read(fileobjs)
 
     def __getitem__(self,arg):
-        if isinstance(self._data, np.ndarray):
-            if arg in self._data.dtype.names: return self._data[arg]
-            if isinstance(arg,tuple):
-                if len(arg) == 2 and isinstance(arg[1], int):
-                    return self._data[self._data.dtype.names[arg[1]]]
-
-        names = self._data[0].dtype.names
-        if all([d.dtype.names == names for d in self._data[1:]]):
-            if isinstance(arg, str) and arg in names:
-                return np.array([d[arg] for d in self._data])
+        if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
         
-        if isinstance(arg,str):
-            if self.key is None: raise ValueError("Cannot access data from FastFileRead object using a key when keyword argument 'key="+str(self.key)+"'")
-            if arg not in self.key: raise KeyError(arg)
-            else: return np.array(self._data[self.key.index(arg)])
-        if isinstance(arg,int):
-            try: return np.array(self._data[arg])
-            except IndexError: raise IndexError("index '"+str(arg)+"' out of range for FastFileRead object of size '"+str(len(self._data))+"'")
-        if isinstance(arg,slice):
-            return self._data[arg]
-        if isinstance(arg,tuple):
-            if all([isinstance(a,int) for a in arg]):
-                return np.array([self[i] for i in arg])
+
+        iterators = None
+        if hasattr(arg,'__iter__'):
+            iterators = [hasattr(a,'__iter__') or isinstance(a,slice) for a in arg]
+        
+        # If we have only 1 file stored in this object
+        if isinstance(self._data, np.ndarray):
+            if isinstance(arg,str) and arg in self.key: return self._data[arg]
             
-            if len(arg) != 2 or not any([isinstance(a,int) for a in arg]):
-                raise IndexError("Must use notation '[:,N]' to retrieve columns from every file or '[N,:]' to retrieve rows, where N is the column/row number")
+            # Simple cases
+            if isinstance(arg,int): return self._data[arg]
+            if isinstance(arg,str):
+                if arg in self._data.dtype.names: return self._data[arg]
+                else: raise IndexError("Unrecognized index '"+arg+"'. Valid indices are '"+str(self._data.dtype.names)+"'")
+            if isinstance(arg,slice): return self._data[arg]
+            
+            if hasattr(arg, '__iter__'):
+                if sum(iterators) == 0: return self._data[list(arg)]
+                if sum(iterators) > 2:
+                    raise IndexError("Cannot have > 2 iterable objects when indexing a FastFileRead object")
+                if len(arg) != 2:
+                    raise IndexError("When indexing using lists, tuples, np.ndarrays, or slices, you must use a maximum of only 2 elements, such as '[:,1]', '[3:9,2:7]', '[(3,4,7):[0,5,2]]'")
                 
-            if isinstance(arg[0],int):
-                return np.array([d[arg[0]] for d in self._data])
-            if isinstance(arg[1],int):
-                return np.array([d[d.dtype.names[arg[1]]] for d in self._data])
+                # Get the rows
+                if iterators[0]:
+                    if isinstance(arg[0],slice): rows = self._data[arg[0]]
+                    else: rows = np.array([self._data[row] for row in arg[0]])
+                else: rows = self._data[arg[0]]
+                
+                if iterators[1]:
+                    # User is doing a simple column retrieval
+                    if not isinstance(arg[1],slice):
+                        return np.column_stack(tuple([rows[name] for name in [self._data.dtype.names[d] for d in arg[1]]]))
+                    return np.column_stack(tuple([rows[name] for name in self._data.dtype.names[arg[1]]]))
+                # User is doing a simple row retrieval
+                return np.array([row[arg[1]] for row in rows])
+            raise IndexError("Failed to find index")
+
+        # If the we have more than 1 file stored in this object
+
+        # Simple cases
+        if isinstance(arg,(int,slice)):
+            return np.array(self._data[arg])
+        if isinstance(arg,str):
+            return np.array(self._data[self.key.index(arg)])
+        
+        if hasattr(arg,'__iter__'):
+            if sum(iterators) == 0:
+                return np.array([self._data[a] for a in arg])
+            if sum(iterators) > 2:
+                raise IndexError("Cannot have > 2 iterable objects when indexing a FastFileRead object")
+            if len(arg) != 2:
+                raise IndexError("When indexing using lists, tuples, np.ndarrays, or slices, you must use a maximum of only 2 elements, such as '[:,1]', '[3:9,2:7]', '[(3,4,7):[0,5,2]]'")
             
-        raise IndexError("Unable to retrieve data using '"+str(arg)+"'")
+            # Get the files
+            if iterators[0]:
+                if isinstance(arg[0],slice): files = self._data[arg[0]]
+                else: files = np.array([self._data[f] for f in arg[0]])
+            else:
+                files = self._data[arg[0]]
+
+            # Get the columns in each file
+            if iterators[1]:
+                # User is doing multiple column retrieval
+                names = [f.dtype.names for f in files]
+                cols = []
+                for a in arg[1]: # Make sure this column exists in every file we want to retrieve
+                    if isinstance(a,int):
+                        for i,(f,n) in enumerate(zip(files,names)):
+                            try: f[n[a]]
+                            except IndexError:
+                                raise IndexError("Integer column index '"+str(a)+"' out of range for file with key '"+str(self.key[i])+"' and dtype names of '"+str(f.dtype.names)+"'")
+                        cols.append(names[i][a])
+                    elif isinstance(a,str):
+                        for i,f in enumerate(files):
+                            try: f[a]
+                            except ValueError as e:
+                                raise ValueError(str(e)+" in file with key '"+str(self.key[i])+"'")
+                        cols.append(a)
+                    else:
+                        raise IndexError("Got column index of type '"+type(a)+"' but expected types 'int' or 'str'")
+                    
+                # All files contain the required columns
+                return np.array([np.array([f[col] for col in cols]) for f in files])
+            else:
+                # User is doing single column retrieval
+                return np.array([f[arg[1]] for f in files])
+            
+        raise IndexError("Failed to find index")
 
     def __str__(self):
         if isinstance(self._data, np.ndarray):
