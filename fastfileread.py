@@ -233,17 +233,45 @@ class FastFileRead:
             self._read(fileobjs)
 
     def __getitem__(self,arg):
-        if not isinstance(arg,(str,int,slice)): raise TypeError("Indices must be integers, strings, or a slice")
+        if isinstance(self._data, np.ndarray):
+            if arg in self._data.dtype.names: return self._data[arg]
+            if isinstance(arg,tuple):
+                if len(arg) == 2 and isinstance(arg[1], int):
+                    return self._data[self._data.dtype.names[arg[1]]]
+
+        names = self._data[0].dtype.names
+        if all([d.dtype.names == names for d in self._data[1:]]):
+            if isinstance(arg, str) and arg in names:
+                return np.array([d[arg] for d in self._data])
         
         if isinstance(arg,str):
             if self.key is None: raise ValueError("Cannot access data from FastFileRead object using a key when keyword argument 'key="+str(self.key)+"'")
             if arg not in self.key: raise KeyError(arg)
-            else: return self._data[self.key.index(arg)]
-        elif isinstance(arg,int):
-            try: return self._data[arg]
+            else: return np.array(self._data[self.key.index(arg)])
+        if isinstance(arg,int):
+            try: return np.array(self._data[arg])
             except IndexError: raise IndexError("index '"+str(arg)+"' out of range for FastFileRead object of size '"+str(len(self._data))+"'")
-        elif isinstance(arg,slice): return self._data[arg]
+        if isinstance(arg,slice):
+            return self._data[arg]
+        if isinstance(arg,tuple):
+            if all([isinstance(a,int) for a in arg]):
+                return np.array([self[i] for i in arg])
+            
+            if len(arg) != 2 or not any([isinstance(a,int) for a in arg]):
+                raise IndexError("Must use notation '[:,N]' to retrieve columns from every file or '[N,:]' to retrieve rows, where N is the column/row number")
+                
+            if isinstance(arg[0],int):
+                return np.array([d[arg[0]] for d in self._data])
+            if isinstance(arg[1],int):
+                return np.array([d[d.dtype.names[arg[1]]] for d in self._data])
+            
+        raise IndexError("Unable to retrieve data using '"+str(arg)+"'")
 
+    def __str__(self):
+        if isinstance(self._data, np.ndarray):
+            return "<FastFileRead(1 file)>\n"+self._data.dtype.names.__str__() + "\n" + self._data.__str__()
+        else:
+            return "<FastFileRead("+str(len(self._data))+" files, key="+str(self.key)+")>"
 
     def __setitem__(self,arg,val):
         for i in range(0,len(self[arg])):
@@ -282,6 +310,7 @@ class FastFileRead:
                     self._data[i] = self._read_binary(fileobj)
                 fileobj['buffer'].close()
                 if self.verbose: print("%10f %s" % (time()-start,fileobj['path']))
+        if len(self._data) == 1: self._data = self._data[0]
 
     def _prepare_file(self,fileobj):
         # Prepares an already-opened file
