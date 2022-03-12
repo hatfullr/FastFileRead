@@ -234,15 +234,23 @@ class FastFileRead:
 
     def __getitem__(self,arg):
         if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
-        
 
+        if isinstance(arg,str): return self._data[self.key.index(arg)]
+        
         iterators = None
         if hasattr(arg,'__iter__'):
             iterators = [hasattr(a,'__iter__') or isinstance(a,slice) for a in arg]
         
         # If we have only 1 file stored in this object
         if isinstance(self._data, np.ndarray):
-            if isinstance(arg,str) and arg in self.key: return self._data[arg]
+            if isinstance(arg,slice):
+                if arg.step is not None and not isinstance(arg.step,int):
+                    raise IndexError("Cannot slice with non-integer steps")
+                start = arg.start
+                stop = arg.stop
+                if isinstance(start,str): start = self._data.dtype.names.index(start)
+                if isinstance(stop,str): stop = self._data.dtype.names.index(stop)
+                return self._data[slice(start,stop,arg.step)]
             
             # Simple cases
             if isinstance(arg,int): return self._data[arg]
@@ -276,13 +284,19 @@ class FastFileRead:
         # If the we have more than 1 file stored in this object
 
         # Simple cases
-        if isinstance(arg,(int,slice)):
+        if isinstance(arg,int):
             return np.array(self._data[arg])
         if isinstance(arg,str):
             return np.array(self._data[self.key.index(arg)])
+        if isinstance(arg,slice):
+            start = arg.start
+            stop = arg.stop
+            if isinstance(start,str): start = self.key.index(start)
+            if isinstance(stop,str): stop = self.key.index(stop)
+            return self._data[slice(start,stop,arg.step)]
         
         if hasattr(arg,'__iter__'):
-            if sum(iterators) == 0:
+            if len(arg) == 1 and sum(iterators) == 0:
                 return np.array([self._data[a] for a in arg])
             if sum(iterators) > 2:
                 raise IndexError("Cannot have > 2 iterable objects when indexing a FastFileRead object")
@@ -292,9 +306,17 @@ class FastFileRead:
             # Get the files
             if iterators[0]:
                 if isinstance(arg[0],slice): files = self._data[arg[0]]
-                else: files = np.array([self._data[f] for f in arg[0]])
+                else:
+                    indices = []
+                    for a in arg[0]:
+                        if isinstance(a,int): indices.append(a)
+                        elif isinstance(a,str): indices.append(self.key.index(a))
+                        else: raise IndexError("Got a file index '"+str(a)+"' of type '"+type(a)+"' but expected types 'int' or 'str'")
+                    files = np.array([self._data[index] for index in indices])
             else:
-                files = self._data[arg[0]]
+                if isinstance(arg[0],int): files = self._data[arg[0]]
+                elif isinstance(arg[0],str): files =  self._data[self.key.index(arg[0])]
+                else: raise IndexError("Got a file index '"+str(arg[0])+"' of type '"+type(arg[0])+"' but expected types 'int' or 'str'")
 
             # Get the columns in each file
             if iterators[1]:
@@ -315,7 +337,7 @@ class FastFileRead:
                                 raise ValueError(str(e)+" in file with key '"+str(self.key[i])+"'")
                         cols.append(a)
                     else:
-                        raise IndexError("Got column index of type '"+type(a)+"' but expected types 'int' or 'str'")
+                        raise IndexError("Got column index '"+str(a)+"' of type '"+type(a)+"' but expected types 'int' or 'str'")
                     
                 # All files contain the required columns
                 return np.array([np.array([f[col] for col in cols]) for f in files])
