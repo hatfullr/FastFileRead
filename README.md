@@ -440,14 +440,35 @@ print("NumPy's loadtxt:",time()-start)
 Another benefit of FastFileRead is its ability to read binary data files. However, you must supply the data structure yourself. We suggest you read the descriptions of the input parameters in the text above before attempting this.
 
 
-### Use with StarSmasher output
+### Accessing data
+There are several ways you can reference the data returned by `FastFileRead`, especially when all the files have the same data formats and lengths:
+```python
+files = ffr.FastFileRead(filenames)
+
+files # FastFileRead object
+
+# When filenames is a string or a list/tuple with length = 1
+files[:,3] # 3rd column
+files[3]   # 3rd row
+files[3,:] # Equivalent to files[3]
+
+# When filenames is a list/tuple with length > 1
+files[0,4,7]  # Data in filenames[0], filenames[4], and filenames[7]
+files[0:5]    # Data contained in filenames[0], filenames[1], ..., filenames[4]
+files[:,5]    # 5th column of every file in filenames
+files[5,:]    # 5th row of every file in filenames
+files[:,5][3] # 5th column corresponding with filenames[3]
+```
+
+
+### Reading StarSmasher output
 The author of FastFileRead often uses output from ![StarSmasher](https://jalombar.github.io/starsmasher/), and so a special convenience function has been included with FastFileRead called `read_starsmasher` to read `out*.sph` data files. If you would also like to use this function, please note that the number of data columns in the output files might be dependent on the version of StarSmasher they came from. Thus, if you run into errors, you may need to edit `read_starsmasher` and update the following variables: `header_names`, `data_names`, `header_format`, and `data_format`.
 
 You must use the dtype names automatically assigned to each of the columns
 ```python
 data = read_starsmasher("out0000.sph")
-print(data[0].dtype.names)
-print(data[0]['x'])
+print(data.dtype.names)
+print(data['x'])
 ```
 Output:
 ```python
@@ -460,12 +481,11 @@ Here is an example of how to use the `read_starsmasher` function:
 ```python
 from fastfileread import read_starsmasher
 
-# Returns only the file data. Must reference the data using an integer.
+# Returns only the file data
 data = read_starsmasher("out0000.sph")
-print(data[0])
-print(data[0].dtype.names)
+print(data)
 
-# Returns the file data and headers. Must reference the data and headers using an integer.
+# Returns the file data and headers
 data, headers = read_starsmasher("out0000.sph", return_headers=True)
 print(headers[0])
 
