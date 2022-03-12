@@ -484,12 +484,21 @@ from fastfileread import read_starsmasher
 # Returns only the file data
 data = read_starsmasher("out0000.sph")
 print(data)
+# or
+print(data[:])
 
 # Returns the file data and headers
-data, headers = read_starsmasher("out0000.sph", return_headers=True)
-print(headers[0])
+data, header = read_starsmasher("out0000.sph", return_headers=True)
+print(header)
 
 # Returns the file data and headers. Can reference the data and headers using either an integer or an element from 'key', such as "file1".
 data, headers = read_starsmasher(["out0000.sph", "out0001.sph"], return_headers=True, key=["file1", "file2"])
 print(data["file1"])
+
+# Get the x-position of the particle that is on the 5th data line in all the output files
+print(data[:,'x'][:,5])
+# or
+print(data[:,0][:,5])
+# or
+print(data[
 ```
