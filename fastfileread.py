@@ -320,27 +320,34 @@ class FastFileRead:
 
             # Get the columns in each file
             if iterators[1]:
-                # User is doing multiple column retrieval
-                names = [f.dtype.names for f in files]
                 cols = []
-                for a in arg[1]: # Make sure this column exists in every file we want to retrieve
-                    if isinstance(a,int):
-                        for i,(f,n) in enumerate(zip(files,names)):
-                            try: f[n[a]]
-                            except IndexError:
-                                raise IndexError("Integer column index '"+str(a)+"' out of range for file with key '"+str(self.key[i])+"' and dtype names of '"+str(f.dtype.names)+"'")
-                        cols.append(names[i][a])
-                    elif isinstance(a,str):
-                        for i,f in enumerate(files):
-                            try: f[a]
-                            except ValueError as e:
-                                raise ValueError(str(e)+" in file with key '"+str(self.key[i])+"'")
-                        cols.append(a)
-                    else:
-                        raise IndexError("Got column index '"+str(a)+"' of type '"+type(a)+"' but expected types 'int' or 'str'")
+                names = [f.dtype.names for f in files]
+                if isinstance(arg[1],slice):
+                    cols = names[0]
+                    for name in names[1:]:
+                        if name != cols:
+                            raise IndexError("Cannot index multiple files which have different columns")
+                    cols = cols[arg[1]]
+                else:
+                    # User is doing multiple column retrieval
+                    for a in arg[1]: # Make sure this column exists in every file we want to retrieve
+                        if isinstance(a,int):
+                            for i,(f,n) in enumerate(zip(files,names)):
+                                try: f[n[a]]
+                                except IndexError:
+                                    raise IndexError("Integer column index '"+str(a)+"' out of range for file with key '"+str(self.key[i])+"' and dtype names of '"+str(f.dtype.names)+"'")
+                            cols.append(names[i][a])
+                        elif isinstance(a,str):
+                            for i,f in enumerate(files):
+                                try: f[a]
+                                except ValueError as e:
+                                    raise ValueError(str(e)+" in file with key '"+str(self.key[i])+"'")
+                            cols.append(a)
+                        else:
+                            raise IndexError("Got column index '"+str(a)+"' of type '"+type(a)+"' but expected types 'int' or 'str'")
                     
                 # All files contain the required columns
-                return np.array([np.array([f[col] for col in cols]) for f in files])
+                return np.array([np.column_stack([f[col] for col in cols]) for f in files])
             else:
                 # User is doing single column retrieval
                 return np.array([f[arg[1]] for f in files])
