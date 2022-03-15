@@ -232,6 +232,9 @@ class FastFileRead:
         else:
             self._read(fileobjs)
 
+    def __len__(self):
+        return len(self._data)
+            
     def __getitem__(self,arg):
         if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
 
