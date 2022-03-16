@@ -236,7 +236,6 @@ class FastFileRead:
         return len(self._data)
             
     def __getitem__(self,arg):
-        print(arg)
         if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
         
         iterators = None
