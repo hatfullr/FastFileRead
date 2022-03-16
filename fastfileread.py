@@ -236,9 +236,8 @@ class FastFileRead:
         return len(self._data)
             
     def __getitem__(self,arg):
+        print(arg)
         if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
-
-        if isinstance(arg,str): return self._data[self.key.index(arg)]
         
         iterators = None
         if hasattr(arg,'__iter__'):
@@ -259,6 +258,7 @@ class FastFileRead:
             if isinstance(arg,int): return self._data[arg]
             if isinstance(arg,str):
                 if arg in self._data.dtype.names: return self._data[arg]
+                elif arg in self.key: return self._data
                 else: raise IndexError("Unrecognized index '"+arg+"'. Valid indices are '"+str(self._data.dtype.names)+"'")
             if isinstance(arg,slice): return self._data[arg]
             
@@ -285,7 +285,8 @@ class FastFileRead:
             raise IndexError("Failed to find index")
 
         # If the we have more than 1 file stored in this object
-
+        if isinstance(arg,str): return self._data[self.key.index(arg)]
+        
         # Simple cases
         if isinstance(arg,int):
             return np.array(self._data[arg])
