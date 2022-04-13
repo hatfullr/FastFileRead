@@ -16,7 +16,7 @@ def _frombuffer(buff,chunk=None,shape=None,dtype=None,offset=0,strides=None):
     if chunk is None: return to_return
     else: return to_return, chunk
 
-class FastFileRead:
+class FastFileRead(object):
     """
     Roger Hatfull 2021
     University of Alberta
