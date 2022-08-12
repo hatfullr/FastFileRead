@@ -241,10 +241,23 @@ class FastFileRead(object):
                 self._read(fileobjs)
         else:
             self._read(fileobjs)
+        
+        
 
     def __len__(self):
         return len(self._data)
-            
+
+    def __iter__(self):
+        self._index = 0
+        if isinstance(self._data, list):
+            return iter(self._data)
+    def __next__(self):
+        if self._index < len(self):
+            obj = self._data[self._index]
+            self._index += 1
+            return obj
+        else: raise StopIteration
+        
     def __getitem__(self,arg):
         if isinstance(arg,(list,tuple,np.ndarray)) and len(arg) == 1: arg = arg[0]
         
@@ -690,8 +703,8 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
             data_formats[i] = data_format + ',f8,f8'
             data_column_names[i] = data_names
         elif headers[k]['ncooling'] == 2:
-            data_formats[i] = data_format + ',f8,f8,f8,f8,f8'
-            data_column_names[i] = data_names + ['opacity','uraddot','temperature']
+            data_formats[i] = data_format + ',f8,f8,f8,f8,f8,f8'
+            data_column_names[i] = data_names + ['opacity','uraddot','temperature','tau']
             
     data = FastFileRead(
         filenames,
