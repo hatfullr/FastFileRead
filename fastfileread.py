@@ -681,6 +681,8 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
             f.seek(0,2)
             filesizes[i] = f.tell()
 
+    wasverbose = kwargs.pop('verbose', False)
+    kwargs['verbose'] = False
     headers = FastFileRead(
         filenames,
         footer=filesizes-header_size,
@@ -689,6 +691,7 @@ def read_starsmasher(filenames,return_headers=False,key=None,**kwargs):
         key=key,
         **kwargs
     )
+    kwargs['verbose'] = wasverbose
 
     
 
